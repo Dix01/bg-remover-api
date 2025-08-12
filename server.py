@@ -46,7 +46,7 @@ def remove_background():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 1000))  # Render provides PORT
+    port = int(os.environ.get("PORT", 10000))  # Render provides PORT
     app.run(
         host='0.0.0.0',  # Listen on all interfaces
         port=port,
