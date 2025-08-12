@@ -1,10 +1,19 @@
 from flask import Flask, request, jsonify, send_file
-from rembg import remove
+from rembg import remove, new_session
 from PIL import Image
 import io
 import os
 
 app = Flask(__name__)
+
+# Load the local u2net model ONNX file once at startup
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "u2net.onnx")
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
+print(f"Loading model from {MODEL_PATH}...")
+session = new_session(model_path=MODEL_PATH)
+print("Model loaded.")
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -16,24 +25,19 @@ def health_check():
 @app.route('/remove-bg', methods=['POST'])
 def remove_background():
     try:
-        # Ensure a file was uploaded
         if 'image' not in request.files:
             return jsonify({"error": "No image file provided"}), 400
 
         input_image = request.files['image']
-
-        # Open the uploaded image
         input_pil = Image.open(input_image.stream).convert("RGBA")
 
-        # Remove background
-        output = remove(input_pil)
+        # Remove background using the preloaded session
+        output = remove(input_pil, session=session)
 
-        # Save output to bytes
         img_byte_arr = io.BytesIO()
         output.save(img_byte_arr, format="PNG")
         img_byte_arr.seek(0)
 
-        # Return the image as a file
         return send_file(
             img_byte_arr,
             mimetype='image/png',
@@ -44,11 +48,10 @@ def remove_background():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # Render provides PORT
+    port = int(os.environ.get("PORT", 10000))
     app.run(
-        host='0.0.0.0',  # Listen on all interfaces
+        host='0.0.0.0',
         port=port,
         debug=False,
         threaded=True
