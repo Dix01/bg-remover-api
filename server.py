@@ -6,14 +6,16 @@ import os
 
 app = Flask(__name__)
 
-# Load the local u2net model ONNX file once at startup
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "u2net.onnx")
+# Path to local small model (u2netp.onnx)
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "u2netp.onnx")
+
 if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+    raise FileNotFoundError(f"Local model file not found at {MODEL_PATH}")
 
 print(f"Loading model from {MODEL_PATH}...")
+# Load model without triggering auto-download
 session = new_session(model_path=MODEL_PATH)
-print("Model loaded.")
+print("Model loaded successfully.")
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -31,7 +33,7 @@ def remove_background():
         input_image = request.files['image']
         input_pil = Image.open(input_image.stream).convert("RGBA")
 
-        # Remove background using the preloaded session
+        # Remove background using preloaded local model session
         output = remove(input_pil, session=session)
 
         img_byte_arr = io.BytesIO()
