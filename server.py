@@ -35,7 +35,7 @@ def remove_bg():
     Returns: PNG image with transparent background
     """
     try:
-        # Debug: Log request details (matches your local server)
+        # Debug: Log request details
         logger.info("=== Incoming /remove-bg Request ===")
         logger.info(f"Method: {request.method}")
         logger.info(f"Content-Type: {request.content_type}")
@@ -48,7 +48,7 @@ def remove_bg():
         except Exception as e:
             logger.warning(f"Could not read raw body: {e}")
 
-        # Check if image file is present (iOS app sends 'image', not 'file')
+        # Check if image file is present
         if 'image' not in request.files:
             logger.error("No 'image' field found in request.files")
             return jsonify({"error": "No image file provided"}), 400
@@ -78,18 +78,19 @@ def remove_bg():
             logger.error(f"Invalid image data: {validation_error}")
             return jsonify({"error": "Invalid image data received"}), 400
 
-        # Remove background using the session with your local model
+        # Remove background using the session
         logger.info("Starting background removal...")
         output_image = remove(input_image, session=session)
         logger.info("Background removal completed successfully")
 
-        # Return the result as a PNG image file
+        # --- MODIFIED SECTION ---
+        # Return the result as a PNG image file directly in the response body.
+        # This is the correct method for a programmatic API client like an iOS app.
         return send_file(
             io.BytesIO(output_image),
-            mimetype='image/png',
-            as_attachment=True,
-            download_name=f"no_bg_{file.filename.rsplit('.', 1)[0]}.png"
+            mimetype='image/png'
         )
+        # --- END MODIFIED SECTION ---
 
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}")
@@ -125,6 +126,6 @@ def internal_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    # Use PORT from env for hosting platforms, fallback to 5000 locally
+    # Use PORT from env for hosting platforms, fallback for local
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
